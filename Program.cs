@@ -85,7 +85,8 @@ string[] configuredOrigins =
     ??
     [
         "http://localhost:4200",
-        "https://localhost:4200"
+        "https://localhost:4200",
+        "https://ai-document-intelligence-kappa.vercel.app"
     ];
 
 builder.Services.AddCors(
@@ -96,7 +97,23 @@ builder.Services.AddCors(
             policy =>
             {
                 policy
-                    .WithOrigins(configuredOrigins)
+                    .SetIsOriginAllowed(origin =>
+                    {
+                        if (configuredOrigins.Contains(
+                                origin,
+                                StringComparer.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+
+                        if (!Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri))
+                        {
+                            return false;
+                        }
+
+                        return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                            || uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+                    })
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });

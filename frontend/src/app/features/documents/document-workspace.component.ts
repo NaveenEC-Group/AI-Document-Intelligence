@@ -23,6 +23,7 @@ import {
   validatePdfMagicBytes,
   validateSelectedFile,
 } from '../../core/validation/document-validation';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-document-workspace',
@@ -48,6 +49,7 @@ export class DocumentWorkspaceComponent implements OnInit {
   readonly searchTerm = signal('');
   readonly statusFilter = signal('');
   readonly activeDocumentId = signal<number | null>(null);
+  readonly apiUrl = environment.apiUrl;
 
   readonly stats = computed(() => {
     const items = this.documents();
@@ -395,7 +397,7 @@ export class DocumentWorkspaceComponent implements OnInit {
       }
 
       if (error.status === 0) {
-        return 'Cannot reach the API. Start the .NET backend on port 5017.';
+        return `Cannot reach the API at ${environment.apiUrl}. Check that the Render service is live.`;
       }
 
       if (error.status === 400) {
