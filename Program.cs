@@ -28,18 +28,42 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+string? connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' is not configured.");
+}
+
+bool useSqlite = IsSqliteConnection(connectionString);
+
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
     {
-        options.UseSqlServer(
-            builder.Configuration.GetConnectionString(
-                "DefaultConnection"));
+        if (useSqlite)
+        {
+            options.UseSqlite(connectionString);
+        }
+        else
+        {
+            options.UseSqlServer(connectionString);
+        }
     });
 
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IPdfTextExtractor, PdfTextExtractor>();
 builder.Services.AddScoped<IOcrService, OcrService>();
 builder.Services.AddScoped<IAiDocumentService, AiDocumentService>();
+
+string[] configuredOrigins =
+    builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ??
+    [
+        "http://localhost:4200",
+        "https://localhost:4200"
+    ];
 
 builder.Services.AddCors(
     options =>
@@ -49,9 +73,7 @@ builder.Services.AddCors(
             policy =>
             {
                 policy
-                    .WithOrigins(
-                        "http://localhost:4200",
-                        "https://localhost:4200")
+                    .WithOrigins(configuredOrigins)
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });
@@ -64,24 +86,60 @@ using (IServiceScope scope = app.Services.CreateScope())
     ApplicationDbContext dbContext =
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    dbContext.Database.Migrate();
+    if (useSqlite)
+    {
+        string? dataSource = GetSqliteDataSourcePath(connectionString);
+        if (!string.IsNullOrWhiteSpace(dataSource))
+        {
+            string? directory = Path.GetDirectoryName(dataSource);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+        }
+
+        dbContext.Database.EnsureCreated();
+    }
+    else
+    {
+        dbContext.Database.Migrate();
+    }
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("Angular");
-
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
 
 app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
 app.Run();
+
+static bool IsSqliteConnection(string connectionString)
+{
+    return connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)
+        || connectionString.Contains("Filename=", StringComparison.OrdinalIgnoreCase);
+}
+
+static string? GetSqliteDataSourcePath(string connectionString)
+{
+    const string marker = "Data Source=";
+    int index = connectionString.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+    if (index < 0)
+    {
+        return null;
+    }
+
+    string value = connectionString[(index + marker.Length)..].Trim();
+    int separator = value.IndexOf(';');
+    if (separator >= 0)
+    {
+        value = value[..separator];
+    }
+
+    return value.Trim().Trim('"');
+}
