@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: ai-document-backend
+    runtime: docker
+    plan: standard
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:10000
+      - key: OPENAI_API_KEY
+        scope: build,runtime
+      - key: ConnectionStrings__DefaultConnection
+        scope: runtime
+    dockerfilePath: ./Dockerfile
+    registryCredential: ${RENDER_REGISTRY_CREDENTIAL}
