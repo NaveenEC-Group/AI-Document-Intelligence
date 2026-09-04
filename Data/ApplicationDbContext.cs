@@ -36,8 +36,7 @@ public class ApplicationDbContext : DbContext
                 .HasMaxLength(50)
                 .IsRequired();
 
-            entity.Property(document => document.ExtractedText)
-                .HasColumnType("nvarchar(max)");
+            entity.Property(document => document.ExtractedText);
         });
 
         modelBuilder.Entity<ExtractedDocument>(entity =>
@@ -51,7 +50,6 @@ public class ApplicationDbContext : DbContext
                 .IsRequired();
 
             entity.Property(extractedDocument => extractedDocument.ExtractedData)
-                .HasColumnType("nvarchar(max)")
                 .IsRequired();
 
             entity.HasOne(extractedDocument => extractedDocument.Document)
