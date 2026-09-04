@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+  --ink: #102a30;
+  --ink-soft: #234047;
+  --muted: #5d7378;
+  --paper: #eef5f3;
+  --accent: #148c84;
+  --warm: #d68910;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% -8%, rgba(20, 140, 132, 0.16), transparent 36%),
+    radial-gradient(circle at 95% 0%, rgba(214, 137, 16, 0.12), transparent 30%),
+    linear-gradient(165deg, #f3f8f6 0%, #e8f0ed 48%, #dde8e4 100%);
+  background-attachment: fixed;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

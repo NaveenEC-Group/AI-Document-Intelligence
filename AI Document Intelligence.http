@@ -1,0 +1,17 @@
+@AI_Document_Intelligence_HostAddress = http://localhost:5017
+
+### Upload a PDF document
+POST {{AI_Document_Intelligence_HostAddress}}/api/documents/upload
+Accept: application/json
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="sample.pdf"
+Content-Type: application/pdf
+
+< ./sample.pdf
+------WebKitFormBoundary--
+
+### Get extracted document by id
+GET {{AI_Document_Intelligence_HostAddress}}/api/documents/1
+Accept: application/json

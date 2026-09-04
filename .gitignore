@@ -1,0 +1,26 @@
+## .NET
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.dll
+*.pdb
+*.cache
+
+## Angular / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+## Secrets / local
+.env
+.env.*
+appsettings.*.local.json
+
+## OS
+Thumbs.db
+Desktop.ini
+
+## IDE
+.idea/

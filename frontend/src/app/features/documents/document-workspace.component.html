@@ -1,0 +1,292 @@
+<div class="app-frame">
+  <header class="topbar">
+    <div class="topbar__brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <p class="topbar__name">AI Document Intelligence</p>
+        <p class="topbar__tag">PDF extraction workspace</p>
+      </div>
+    </div>
+    <div class="topbar__meta">
+      <span>API · localhost:5017</span>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Document statistics">
+    <article class="stat">
+      <p class="stat__label">Total</p>
+      <p class="stat__value">{{ stats().total }}</p>
+    </article>
+    <article class="stat">
+      <p class="stat__label">Completed</p>
+      <p class="stat__value stat__value--ok">{{ stats().completed }}</p>
+    </article>
+    <article class="stat">
+      <p class="stat__label">Failed</p>
+      <p class="stat__value stat__value--bad">{{ stats().failed }}</p>
+    </article>
+    <article class="stat">
+      <p class="stat__label">Processing</p>
+      <p class="stat__value stat__value--busy">{{ stats().processing }}</p>
+    </article>
+  </section>
+
+  <div class="layout">
+    <section class="panel panel--main" aria-label="Upload and results">
+      <div class="panel__head">
+        <div>
+          <p class="eyebrow">Ingest</p>
+          <h1>Upload & extract</h1>
+        </div>
+      </div>
+
+      <div
+        class="dropzone"
+        [class.dropzone--active]="isDragging()"
+        [class.dropzone--busy]="isProcessing()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+        role="button"
+        tabindex="0"
+        (click)="openFilePicker()"
+        (keydown.enter)="openFilePicker()"
+        (keydown.space)="$event.preventDefault(); openFilePicker()"
+      >
+        <input
+          #fileInput
+          type="file"
+          accept="application/pdf,.pdf"
+          hidden
+          (change)="onFileSelected($event)"
+        />
+
+        <div class="dropzone__glyph" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </div>
+
+        <p class="dropzone__title">
+          @if (isProcessing()) {
+            Analyzing document…
+          } @else if (selectedFile()) {
+            {{ selectedFile()!.name }}
+          } @else {
+            Drop a PDF here, or browse
+          }
+        </p>
+        <p class="dropzone__hint">
+          @if (selectedFile(); as file) {
+            {{ formatBytes(file.size) }} · PDF · max 10 MB
+          } @else {
+            Secure upload · PDF only · up to 10 MB
+          }
+        </p>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="!selectedFile() || isProcessing()"
+          (click)="processDocument()"
+        >
+          @if (isProcessing()) {
+            Processing…
+          } @else {
+            Extract data
+          }
+        </button>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="(!selectedFile() && !result()) || isProcessing()"
+          (click)="clearSelection()"
+        >
+          Clear
+        </button>
+      </div>
+
+      @if (isLoadingDetail()) {
+        <p class="loading-line">Loading document details…</p>
+      }
+
+      @if (result(); as doc) {
+        <section class="results" aria-live="polite">
+          <div class="results__meta">
+            <div>
+              <p class="eyebrow">Extraction result</p>
+              <h2>{{ doc.fileName }}</h2>
+              <p class="results__sub">
+                {{ formatBytes(doc.fileSize) }}
+                · {{ doc.createdAt | date: 'medium' }}
+                @if (doc.processedAt) {
+                  · processed {{ doc.processedAt | date: 'shortTime' }}
+                }
+              </p>
+            </div>
+            <div class="chips">
+              <span class="chip">#{{ doc.documentId }}</span>
+              <span [class]="statusClass(doc.status)">{{ doc.status }}</span>
+              @if (doc.documentType) {
+                <span class="chip chip--type">{{ doc.documentType }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="result-actions">
+            <button type="button" class="btn btn--ghost btn--small" (click)="copyJson()">
+              Copy JSON
+            </button>
+            <button type="button" class="btn btn--ghost btn--small" (click)="downloadJson()">
+              Download JSON
+            </button>
+          </div>
+
+          @if (parsedData(); as data) {
+            <div class="fields">
+              <div class="field">
+                <span class="field__label">Vendor</span>
+                <span class="field__value">{{ data.vendor || '—' }}</span>
+              </div>
+              <div class="field">
+                <span class="field__label">Customer</span>
+                <span class="field__value">{{ data.customer || '—' }}</span>
+              </div>
+              <div class="field">
+                <span class="field__label">Invoice #</span>
+                <span class="field__value">{{ data.invoiceNumber || '—' }}</span>
+              </div>
+              <div class="field">
+                <span class="field__label">Date</span>
+                <span class="field__value">{{ data.invoiceDate || '—' }}</span>
+              </div>
+              <div class="field">
+                <span class="field__label">Total</span>
+                <span class="field__value">
+                  @if (data.totalAmount != null && data.totalAmount !== '') {
+                    {{ data.currency || '' }} {{ data.totalAmount }}
+                  } @else {
+                    —
+                  }
+                </span>
+              </div>
+              <div class="field">
+                <span class="field__label">Type</span>
+                <span class="field__value">{{ data.documentType || doc.documentType || '—' }}</span>
+              </div>
+            </div>
+
+            @if (lineItems().length) {
+              <div class="line-items">
+                <h3>Line items</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Unit</th>
+                        <th>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of lineItems(); track $index) {
+                        <tr>
+                          <td>{{ lineItemValue(item, 'description') }}</td>
+                          <td>{{ lineItemValue(item, 'quantity') }}</td>
+                          <td>{{ lineItemValue(item, 'unitPrice') }}</td>
+                          <td>{{ lineItemValue(item, 'amount') }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          }
+
+          <details class="raw">
+            <summary>Raw JSON</summary>
+            <pre>{{ doc.extractedData }}</pre>
+          </details>
+        </section>
+      }
+    </section>
+
+    <aside class="panel panel--side" aria-label="Document history">
+      <div class="panel__head panel__head--row">
+        <div>
+          <p class="eyebrow">Library</p>
+          <h2>History</h2>
+        </div>
+        <button
+          type="button"
+          class="btn btn--ghost btn--small"
+          [disabled]="isLoadingList()"
+          (click)="refreshDocuments()"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div class="filters">
+        <input
+          type="search"
+          [ngModel]="searchTerm()"
+          (ngModelChange)="onSearchChange($event)"
+          placeholder="Search by file name"
+          aria-label="Search documents"
+        />
+        <select
+          [ngModel]="statusFilter()"
+          (ngModelChange)="onStatusFilterChange($event)"
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          <option value="Completed">Completed</option>
+          <option value="Failed">Failed</option>
+          <option value="Processing">Processing</option>
+        </select>
+      </div>
+
+      @if (isLoadingList()) {
+        <p class="loading-line">Loading history…</p>
+      } @else if (!documents().length) {
+        <p class="empty">No documents yet. Upload a PDF to get started.</p>
+      } @else {
+        <ul class="history">
+          @for (item of documents(); track item.documentId) {
+            <li>
+              <button
+                type="button"
+                class="history__item"
+                [class.history__item--active]="activeDocumentId() === item.documentId"
+                (click)="openDocument(item)"
+              >
+                <div class="history__top">
+                  <span class="history__name">{{ item.fileName }}</span>
+                  <span [class]="statusClass(item.status)">{{ item.status }}</span>
+                </div>
+                <div class="history__meta">
+                  <span>#{{ item.documentId }}</span>
+                  <span>{{ item.documentType || 'Unclassified' }}</span>
+                  <span>{{ formatBytes(item.fileSize) }}</span>
+                  <span>{{ item.createdAt | date: 'short' }}</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                class="history__delete"
+                title="Delete document"
+                (click)="deleteDocument(item, $event)"
+              >
+                Delete
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </aside>
+  </div>
+</div>
