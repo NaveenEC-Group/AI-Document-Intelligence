@@ -20,7 +20,8 @@ RUN mkdir -p /app/data
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:8080
-ENV ConnectionStrings__DefaultConnection=Data Source=/app/data/aidocs.db
+ENV Database__Provider=Sqlite
+ENV ConnectionStrings__DefaultConnection="Data Source=/app/data/aidocs.db"
 
 EXPOSE 8080
 

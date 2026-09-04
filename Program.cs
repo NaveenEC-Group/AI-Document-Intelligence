@@ -28,16 +28,39 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-string? connectionString =
+const string sqliteDefault = "Data Source=/app/data/aidocs.db";
+
+string? configuredConnection =
     builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "Connection string 'DefaultConnection' is not configured.");
-}
+string databaseProvider =
+    builder.Configuration["Database:Provider"]
+    ?? (builder.Environment.IsProduction() ? "Sqlite" : "SqlServer");
 
-bool useSqlite = IsSqliteConnection(connectionString);
+bool useSqlite =
+    databaseProvider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase)
+    || IsSqliteConnection(configuredConnection);
+
+string connectionString = useSqlite
+    ? (IsSqliteConnection(configuredConnection)
+        ? configuredConnection!
+        : sqliteDefault)
+    : (configuredConnection
+        ?? throw new InvalidOperationException(
+            "Connection string 'DefaultConnection' is not configured."));
+
+if (useSqlite)
+{
+    string? dataSource = GetSqliteDataSourcePath(connectionString);
+    if (!string.IsNullOrWhiteSpace(dataSource))
+    {
+        string? directory = Path.GetDirectoryName(dataSource);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+    }
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
@@ -88,16 +111,6 @@ using (IServiceScope scope = app.Services.CreateScope())
 
     if (useSqlite)
     {
-        string? dataSource = GetSqliteDataSourcePath(connectionString);
-        if (!string.IsNullOrWhiteSpace(dataSource))
-        {
-            string? directory = Path.GetDirectoryName(dataSource);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-        }
-
         dbContext.Database.EnsureCreated();
     }
     else
@@ -115,12 +128,21 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    database = useSqlite ? "sqlite" : "sqlserver"
+}));
 
 app.Run();
 
-static bool IsSqliteConnection(string connectionString)
+static bool IsSqliteConnection(string? connectionString)
 {
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        return false;
+    }
+
     return connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)
         || connectionString.Contains("Filename=", StringComparison.OrdinalIgnoreCase);
 }
@@ -134,7 +156,7 @@ static string? GetSqliteDataSourcePath(string connectionString)
         return null;
     }
 
-    string value = connectionString[(index + marker.Length)..].Trim();
+    string value = connectionString[(index + marker.Length)..].Trim().Trim('"');
     int separator = value.IndexOf(';');
     if (separator >= 0)
     {
