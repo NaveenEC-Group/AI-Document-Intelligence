@@ -15,14 +15,16 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 COPY --from=builder /app/publish .
+COPY entrypoint.sh /app/entrypoint.sh
 
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data \
+    && chmod +x /app/entrypoint.sh
 
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://+:8080
 ENV Database__Provider=Sqlite
-ENV ConnectionStrings__DefaultConnection="Data Source=/app/data/aidocs.db"
+ENV ConnectionStrings__DefaultConnection=Data Source=/app/data/aidocs.db
+ENV PORT=8080
 
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "AI Document Intelligence.dll"]
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -31,7 +31,8 @@ builder.Services.AddSwaggerGen();
 const string sqliteDefault = "Data Source=/app/data/aidocs.db";
 
 string? configuredConnection =
-    builder.Configuration.GetConnectionString("DefaultConnection");
+    NormalizeConnectionString(
+        builder.Configuration.GetConnectionString("DefaultConnection"));
 
 string databaseProvider =
     builder.Configuration["Database:Provider"]
@@ -61,6 +62,9 @@ if (useSqlite)
         }
     }
 }
+
+Console.WriteLine(
+    $"Database provider: {(useSqlite ? "Sqlite" : "SqlServer")}; connection configured.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
@@ -121,19 +125,34 @@ builder.Services.AddCors(
 
 WebApplication app = builder.Build();
 
-using (IServiceScope scope = app.Services.CreateScope())
+// Register health before DB init so we can still diagnose boot issues in logs.
+app.MapGet("/health", () => Results.Ok(new
 {
+    status = "ok",
+    database = useSqlite ? "sqlite" : "sqlserver"
+}));
+
+try
+{
+    using IServiceScope scope = app.Services.CreateScope();
     ApplicationDbContext dbContext =
         scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     if (useSqlite)
     {
         dbContext.Database.EnsureCreated();
+        Console.WriteLine("SQLite database ready.");
     }
     else
     {
         dbContext.Database.Migrate();
+        Console.WriteLine("SQL Server migrations applied.");
     }
+}
+catch (Exception exception)
+{
+    Console.Error.WriteLine($"Database initialization failed: {exception}");
+    throw;
 }
 
 app.UseSwagger();
@@ -145,13 +164,17 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapGet("/health", () => Results.Ok(new
-{
-    status = "ok",
-    database = useSqlite ? "sqlite" : "sqlserver"
-}));
-
 app.Run();
+
+static string? NormalizeConnectionString(string? connectionString)
+{
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        return null;
+    }
+
+    return connectionString.Trim().Trim('"');
+}
 
 static bool IsSqliteConnection(string? connectionString)
 {
