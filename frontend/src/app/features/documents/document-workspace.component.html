@@ -1,49 +1,53 @@
-<div class="app-frame">
-  <header class="topbar">
-    <div class="topbar__brand">
-      <span class="mark" aria-hidden="true"></span>
+<div class="shell">
+  <header class="header">
+    <div class="header__brand">
+      <div class="logo" aria-hidden="true">
+        <span></span>
+      </div>
       <div>
-        <p class="topbar__name">AI Document Intelligence</p>
-        <p class="topbar__tag">PDF extraction workspace</p>
+        <h1 class="brand">AI Document Intelligence</h1>
+        <p class="tagline">Structured extraction from business PDFs</p>
       </div>
     </div>
-    <div class="topbar__meta">
-      <span>API · {{ apiUrl }}</span>
+
+    <div class="header__aside">
+      <div class="metric-strip" aria-label="Document statistics">
+        <div class="metric">
+          <span class="metric__label">Total</span>
+          <strong>{{ stats().total }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric__label">Completed</span>
+          <strong class="is-ok">{{ stats().completed }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric__label">Failed</span>
+          <strong class="is-bad">{{ stats().failed }}</strong>
+        </div>
+        <div class="metric">
+          <span class="metric__label">Processing</span>
+          <strong class="is-warn">{{ stats().processing }}</strong>
+        </div>
+      </div>
+      <span class="api-pill" [title]="apiUrl">API connected</span>
     </div>
   </header>
 
-  <section class="stats" aria-label="Document statistics">
-    <article class="stat">
-      <p class="stat__label">Total</p>
-      <p class="stat__value">{{ stats().total }}</p>
-    </article>
-    <article class="stat">
-      <p class="stat__label">Completed</p>
-      <p class="stat__value stat__value--ok">{{ stats().completed }}</p>
-    </article>
-    <article class="stat">
-      <p class="stat__label">Failed</p>
-      <p class="stat__value stat__value--bad">{{ stats().failed }}</p>
-    </article>
-    <article class="stat">
-      <p class="stat__label">Processing</p>
-      <p class="stat__value stat__value--busy">{{ stats().processing }}</p>
-    </article>
-  </section>
-
-  <div class="layout">
-    <section class="panel panel--main" aria-label="Upload and results">
-      <div class="panel__head">
-        <div>
-          <p class="eyebrow">Ingest</p>
-          <h1>Upload & extract</h1>
-        </div>
+  <div class="workbench">
+    <section class="stage" aria-label="Upload and extraction">
+      <div class="stage__intro">
+        <p class="kicker">Workspace</p>
+        <h2>Upload a document</h2>
+        <p class="lede">
+          Drop an invoice or business PDF. We extract vendor, amounts, dates, and line items into structured data.
+        </p>
       </div>
 
       <div
         class="dropzone"
         [class.dropzone--active]="isDragging()"
         [class.dropzone--busy]="isProcessing()"
+        [class.dropzone--ready]="!!selectedFile()"
         (dragover)="onDragOver($event)"
         (dragleave)="onDragLeave($event)"
         (drop)="onDrop($event)"
@@ -61,9 +65,11 @@
           (change)="onFileSelected($event)"
         />
 
-        <div class="dropzone__glyph" aria-hidden="true">
-          <span></span>
-          <span></span>
+        <div class="dropzone__icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="12" y="8" width="24" height="32" rx="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M18 18h12M18 24h12M18 30h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
         </div>
 
         <p class="dropzone__title">
@@ -72,19 +78,19 @@
           } @else if (selectedFile()) {
             {{ selectedFile()!.name }}
           } @else {
-            Drop a PDF here, or browse
+            Drop PDF here or browse files
           }
         </p>
         <p class="dropzone__hint">
           @if (selectedFile(); as file) {
-            {{ formatBytes(file.size) }} · PDF · max 10 MB
+            {{ formatBytes(file.size) }} · PDF · ready to extract
           } @else {
-            Secure upload · PDF only · up to 10 MB
+            PDF only · maximum 10 MB
           }
         </p>
       </div>
 
-      <div class="actions">
+      <div class="toolbar">
         <button
           type="button"
           class="btn btn--primary"
@@ -92,14 +98,14 @@
           (click)="processDocument()"
         >
           @if (isProcessing()) {
-            Processing…
+            Extracting…
           } @else {
             Extract data
           }
         </button>
         <button
           type="button"
-          class="btn btn--ghost"
+          class="btn btn--secondary"
           [disabled]="(!selectedFile() && !result()) || isProcessing()"
           (click)="clearSelection()"
         >
@@ -108,16 +114,16 @@
       </div>
 
       @if (isLoadingDetail()) {
-        <p class="loading-line">Loading document details…</p>
+        <p class="quiet">Loading document details…</p>
       }
 
       @if (result(); as doc) {
-        <section class="results" aria-live="polite">
-          <div class="results__meta">
+        <section class="result" aria-live="polite">
+          <div class="result__head">
             <div>
-              <p class="eyebrow">Extraction result</p>
-              <h2>{{ doc.fileName }}</h2>
-              <p class="results__sub">
+              <p class="kicker">Extraction result</p>
+              <h3>{{ doc.fileName }}</h3>
+              <p class="quiet">
                 {{ formatBytes(doc.fileSize) }}
                 · {{ doc.createdAt | date: 'medium' }}
                 @if (doc.processedAt) {
@@ -125,68 +131,68 @@
                 }
               </p>
             </div>
-            <div class="chips">
-              <span class="chip">#{{ doc.documentId }}</span>
+            <div class="badges">
+              <span class="badge">#{{ doc.documentId }}</span>
               <span [class]="statusClass(doc.status)">{{ doc.status }}</span>
               @if (doc.documentType) {
-                <span class="chip chip--type">{{ doc.documentType }}</span>
+                <span class="badge badge--accent">{{ doc.documentType }}</span>
               }
             </div>
           </div>
 
-          <div class="result-actions">
-            <button type="button" class="btn btn--ghost btn--small" (click)="copyJson()">
+          <div class="toolbar toolbar--compact">
+            <button type="button" class="btn btn--secondary btn--sm" (click)="copyJson()">
               Copy JSON
             </button>
-            <button type="button" class="btn btn--ghost btn--small" (click)="downloadJson()">
+            <button type="button" class="btn btn--secondary btn--sm" (click)="downloadJson()">
               Download JSON
             </button>
           </div>
 
           @if (parsedData(); as data) {
-            <div class="fields">
-              <div class="field">
-                <span class="field__label">Vendor</span>
-                <span class="field__value">{{ data.vendor || '—' }}</span>
+            <div class="data-grid">
+              <div class="data-cell">
+                <span>Vendor</span>
+                <strong>{{ data.vendor || '—' }}</strong>
               </div>
-              <div class="field">
-                <span class="field__label">Customer</span>
-                <span class="field__value">{{ data.customer || '—' }}</span>
+              <div class="data-cell">
+                <span>Customer</span>
+                <strong>{{ data.customer || '—' }}</strong>
               </div>
-              <div class="field">
-                <span class="field__label">Invoice #</span>
-                <span class="field__value">{{ data.invoiceNumber || '—' }}</span>
+              <div class="data-cell">
+                <span>Invoice number</span>
+                <strong>{{ data.invoiceNumber || '—' }}</strong>
               </div>
-              <div class="field">
-                <span class="field__label">Date</span>
-                <span class="field__value">{{ data.invoiceDate || '—' }}</span>
+              <div class="data-cell">
+                <span>Invoice date</span>
+                <strong>{{ data.invoiceDate || '—' }}</strong>
               </div>
-              <div class="field">
-                <span class="field__label">Total</span>
-                <span class="field__value">
+              <div class="data-cell">
+                <span>Total</span>
+                <strong>
                   @if (data.totalAmount != null && data.totalAmount !== '') {
                     {{ data.currency || '' }} {{ data.totalAmount }}
                   } @else {
                     —
                   }
-                </span>
+                </strong>
               </div>
-              <div class="field">
-                <span class="field__label">Type</span>
-                <span class="field__value">{{ data.documentType || doc.documentType || '—' }}</span>
+              <div class="data-cell">
+                <span>Document type</span>
+                <strong>{{ data.documentType || doc.documentType || '—' }}</strong>
               </div>
             </div>
 
             @if (lineItems().length) {
-              <div class="line-items">
-                <h3>Line items</h3>
-                <div class="table-wrap">
+              <div class="table-block">
+                <h4>Line items</h4>
+                <div class="table-scroll">
                   <table>
                     <thead>
                       <tr>
                         <th>Description</th>
                         <th>Qty</th>
-                        <th>Unit</th>
+                        <th>Unit price</th>
                         <th>Amount</th>
                       </tr>
                     </thead>
@@ -207,22 +213,22 @@
           }
 
           <details class="raw">
-            <summary>Raw JSON</summary>
+            <summary>View raw JSON</summary>
             <pre>{{ doc.extractedData }}</pre>
           </details>
         </section>
       }
     </section>
 
-    <aside class="panel panel--side" aria-label="Document history">
-      <div class="panel__head panel__head--row">
+    <aside class="rail" aria-label="Document history">
+      <div class="rail__head">
         <div>
-          <p class="eyebrow">Library</p>
+          <p class="kicker">Library</p>
           <h2>History</h2>
         </div>
         <button
           type="button"
-          class="btn btn--ghost btn--small"
+          class="btn btn--secondary btn--sm"
           [disabled]="isLoadingList()"
           (click)="refreshDocuments()"
         >
@@ -235,7 +241,7 @@
           type="search"
           [ngModel]="searchTerm()"
           (ngModelChange)="onSearchChange($event)"
-          placeholder="Search by file name"
+          placeholder="Search documents"
           aria-label="Search documents"
         />
         <select
@@ -251,24 +257,22 @@
       </div>
 
       @if (isLoadingList()) {
-        <p class="loading-line">Loading history…</p>
+        <p class="quiet">Loading history…</p>
       } @else if (!documents().length) {
-        <p class="empty">No documents yet. Upload a PDF to get started.</p>
+        <div class="empty">
+          <p>No documents yet</p>
+          <span>Upload a PDF to start extracting structured data.</span>
+        </div>
       } @else {
-        <ul class="history">
+        <ul class="docs">
           @for (item of documents(); track item.documentId) {
-            <li>
-              <button
-                type="button"
-                class="history__item"
-                [class.history__item--active]="activeDocumentId() === item.documentId"
-                (click)="openDocument(item)"
-              >
-                <div class="history__top">
-                  <span class="history__name">{{ item.fileName }}</span>
+            <li [class.docs__row--active]="activeDocumentId() === item.documentId">
+              <button type="button" class="docs__main" (click)="openDocument(item)">
+                <div class="docs__title">
+                  <span class="docs__name">{{ item.fileName }}</span>
                   <span [class]="statusClass(item.status)">{{ item.status }}</span>
                 </div>
-                <div class="history__meta">
+                <div class="docs__meta">
                   <span>#{{ item.documentId }}</span>
                   <span>{{ item.documentType || 'Unclassified' }}</span>
                   <span>{{ formatBytes(item.fileSize) }}</span>
@@ -277,11 +281,11 @@
               </button>
               <button
                 type="button"
-                class="history__delete"
+                class="docs__delete"
                 title="Delete document"
                 (click)="deleteDocument(item, $event)"
               >
-                Delete
+                Remove
               </button>
             </li>
           }

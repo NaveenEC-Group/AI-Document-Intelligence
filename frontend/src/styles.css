@@ -1,14 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Sora:wght@600;700&display=swap');
 
 :root {
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'Outfit', sans-serif;
-  --ink: #102a30;
-  --ink-soft: #234047;
-  --muted: #5d7378;
-  --paper: #eef5f3;
-  --accent: #148c84;
-  --warm: #d68910;
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --ink: #0f1c1f;
+  --ink-soft: #2a3d42;
+  --muted: #6a7c81;
+  --line: rgba(15, 28, 31, 0.1);
+  --surface: rgba(255, 255, 255, 0.84);
+  --surface-strong: #ffffff;
+  --paper: #f3f6f5;
+  --accent: #0f766e;
+  --accent-soft: rgba(15, 118, 110, 0.1);
+  --warn: #9a6700;
+  --danger: #b42318;
+  --ok: #067647;
+  --radius: 14px;
+  --shadow: 0 1px 0 rgba(15, 28, 31, 0.04), 0 18px 40px rgba(15, 28, 31, 0.06);
 }
 
 *,
@@ -27,9 +35,10 @@ body {
   font-family: var(--font-body);
   color: var(--ink);
   background:
-    radial-gradient(circle at 10% -8%, rgba(20, 140, 132, 0.16), transparent 36%),
-    radial-gradient(circle at 95% 0%, rgba(214, 137, 16, 0.12), transparent 30%),
-    linear-gradient(165deg, #f3f8f6 0%, #e8f0ed 48%, #dde8e4 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 28%),
+    radial-gradient(ellipse 80% 50% at 0% -10%, rgba(15, 118, 110, 0.14), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(15, 28, 31, 0.05), transparent 45%),
+    #e9efed;
   background-attachment: fixed;
 }
 
